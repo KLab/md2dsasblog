@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"github.com/russross/blackfriday"
 	"html"
 	"io/ioutil"
@@ -46,10 +47,32 @@ func main() {
 	ext |= blackfriday.EXTENSION_STRIKETHROUGH
 	ext |= blackfriday.EXTENSION_SPACE_HEADERS
 
-	in, err := ioutil.ReadAll(os.Stdin)
+	var output string
+	flag.StringVar(&output, "out", "-", "output file name")
+	flag.Parse()
+
+	inFile := os.Stdin
+	if flag.NArg() == 1 {
+		var err error
+		inFile, err = os.Open(flag.Arg(0))
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	in, err := ioutil.ReadAll(inFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 	out := blackfriday.Markdown(in, newRenderer(), ext)
-	os.Stdout.Write(out)
+	if output == "-" {
+		os.Stdout.Write(out)
+		return
+	}
+	if f, err := os.Create(output); err != nil {
+		f.Write(out)
+		f.Close()
+		return
+	}
+	log.Fatal(err)
 }
